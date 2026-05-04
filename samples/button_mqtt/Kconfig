@@ -1,0 +1,17 @@
+config BUTTON_MQTT_BROKER_HOSTNAME
+	string "MQTT broker hostname"
+	default "test.mosquitto.org"
+
+config BUTTON_MQTT_CLIENT_ID
+	string "MQTT client ID"
+	default "nrf9151-connectkit-01"
+	help
+	  Must be unique per connected client on the broker.
+
+config BUTTON_MQTT_PUBLISH_TOPIC
+	string "MQTT publish topic"
+	default "nrf9151/button"
+
+menu "Zephyr Kernel"
+source "Kconfig.zephyr"
+endmenu
