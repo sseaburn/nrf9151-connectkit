@@ -37,8 +37,8 @@ static volatile bool lte_connected;
 static uint32_t press_count;
 
 /* Stored at module scope so the reconnect work handler can reach them. */
-static const char broker[]    = CONFIG_BUTTON_MQTT_BROKER_HOSTNAME;
-static const char client_id[] = CONFIG_BUTTON_MQTT_CLIENT_ID;
+static char broker[]    = CONFIG_BUTTON_MQTT_BROKER_HOSTNAME;
+static char client_id[] = CONFIG_BUTTON_MQTT_CLIENT_ID;
 
 /* ---- Button -------------------------------------------------------------- */
 
@@ -78,11 +78,36 @@ static void reconnect_work_fn(struct k_work *work)
 
 /* ---- MQTT callbacks ------------------------------------------------------ */
 
+static void subscribe(void)
+{
+	static const char sub_topic[] = "nrf9151_topic";
+	struct mqtt_topic topics[] = {
+		{
+			.topic.utf8  = sub_topic,
+			.topic.size  = strlen(sub_topic),
+		},
+	};
+	struct mqtt_subscription_list list = {
+		.list       = topics,
+		.list_count = ARRAY_SIZE(topics),
+		.message_id = 1,
+	};
+
+	int err = mqtt_helper_subscribe(&list);
+
+	if (err) {
+		LOG_ERR("Subscribe failed: %d", err);
+	} else {
+		LOG_INF("Subscribed to: %s", sub_topic);
+	}
+}
+
 static void on_mqtt_connack(enum mqtt_conn_return_code code, bool session_present)
 {
 	LOG_INF("MQTT connected to %s", broker);
 	mqtt_connected = true;
 	k_work_cancel_delayable(&reconnect_work);
+	subscribe();
 }
 
 static void on_mqtt_disconnect(int result)
@@ -94,7 +119,9 @@ static void on_mqtt_disconnect(int result)
 
 static void on_mqtt_publish(struct mqtt_helper_buf topic, struct mqtt_helper_buf payload)
 {
-	/* Not subscribing — callback required by the API. */
+	LOG_INF("Received on [%.*s]: %.*s",
+		topic.size,   topic.ptr,
+		payload.size, payload.ptr);
 }
 
 /* ---- Publish ------------------------------------------------------------- */
